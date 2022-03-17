@@ -1,0 +1,229 @@
+import selenium
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+import datetime
+import time
+import KiwiSDR
+import string
+import traceback
+import queue
+from selenium import common
+
+class CalendarMonitor:
+
+    @staticmethod
+    def find_start_time(time_remaining_string):
+        _words = time_remaining_string.split(" ")[-2:]
+        current_time = datetime.datetime.utcnow()
+
+        print(_words)
+        print(f"Current time: {current_time}")
+
+        if ("MINUTES" in _words) or ("MINUTE" in _words) or ("SECONDS" in _words) or ("HOURS" in _words):
+
+            if _words[1] == "HOURS":
+                minutes_remaining = int(_words[0] * 60)
+                start_time = current_time + datetime.timedelta(minutes=minutes_remaining)
+
+            if _words[1] == "MINUTE":
+                minutes_remaining = 1
+                start_time = current_time + datetime.timedelta(minutes=minutes_remaining)
+                if start_time.second != 0:
+                    # Subtract a second so that if this code runs exactly 15s before a station we don't miss it
+
+                    start_time = start_time - datetime.timedelta(seconds=1)
+
+            elif _words[1] == "SECONDS":
+                start_time = current_time + datetime.timedelta(seconds=1)  # START LIKE, NOW!!!
+                start_time = start_time.replace(second=0).replace(microsecond=0)
+                minutes = start_time.minute
+                return start_time
+
+            else:  # X MINUTES REMAINING
+                minutes_remaining = int(_words[0])
+                start_time = current_time + datetime.timedelta(minutes=minutes_remaining)
+                start_time = start_time - datetime.timedelta(seconds=30)
+                start_time = start_time.replace(second=0).replace(microsecond=0)
+
+            # print(f"{minutes_remaining} minutes remaining")
+            print("Starting at " + str(start_time))
+
+            return start_time
+
+    def connect_to_kiwi(self, name, frequency, mode, known_region, start_time, specified_record_time=None):
+        try:
+
+            if known_region:
+                region = known_region
+            else:
+                try:
+                    region = self.stations_to_regions[name.lower()]
+                except KeyError:
+                    print(f"{name} not found in stations-->region dictionary, assuming Mediterranean")
+                    region = "Mediterranean"
+
+            print(f"{name} = {region}")
+            pavlov_dispatcher_link = self.kiwisdr.getLink(region, frequency, mode.lower())
+            self.kiwisdr.navigate(pavlov_dispatcher_link)
+
+            try:
+                if specified_record_time:
+                    record_time = 60*specified_record_time
+                else:
+                    record_time = 60*self.stations_to_transmission_lengths[name.lower()]
+
+            except KeyError:
+                print(name + " not found in station-->transmission length dictionary; assuming 20 minutes")
+                record_time = 20*60
+
+            print("Recording " + name + " for " + str(int(record_time/60)) + " minutes")
+            try:
+                self.kiwisdr.record(mode, frequency, name, record_time, start_time)
+
+            except IndexError:
+                print("All kiwis busy; trying again in 15")
+                time.sleep(15)
+                self.connect_to_kiwi(name, frequency, mode, known_region, start_time,
+                                     specified_record_time=specified_record_time)
+
+        except OSError:
+            traceback.print_exc()
+
+    def loop(self, debug=False, start=None):
+
+        # How much time (in seconds) we give ourself to connect to the kiwiSDR before the transmission starts
+        if debug:
+            # If we are in debug mode, Don't wait for the transmission to actually start before recording so I
+            # can quickly test the code without sitting around for hours waiting for transmissions to start
+            how_early_to_start = 60*60
+
+        else:
+            # Start at the correct time
+            how_early_to_start = 30
+
+        started = False
+        specified_record_time = None
+
+        # If the user specified a station to immediately start recording, make sure we record for the requested amount
+        # of time instead of just looking up the transmission length from self.stations_to_transmission_lengths
+        if start and len(start) == 4:
+            if start[3]:
+                specified_record_time = start[3]
+
+        try:
+            while True:
+                # If the user specified a station to immediately start recording, do that, and then operate normally
+                # from the Priyom calendar after the recording is complete.
+                if start and type(start) == list and not started:
+                    name = start[0]
+                    frequency = start[1]
+                    mode = start[2]
+                    start_time = datetime.datetime.utcnow().replace(second=0)
+                    started = True
+                    record_for = specified_record_time
+                    self.connect_to_kiwi(name, frequency, mode, self.stations_to_regions[name.lower()], start_time,
+                                         specified_record_time=specified_record_time)
+
+                # Scrape calendar data from priyom.org
+                try:
+                    next_station = self.driver.find_element_by_xpath("/html/body/div/div[1]/main/section/div[2]/ul/li").text
+                    time_remaining = self.driver.find_element_by_xpath("/html/body/div/div[1]/main/section/div[2]/h3").text
+                except common.exceptions.WebDriverException:
+                    traceback.print_exc()
+                    print("webdriver died, relaunching")
+                    self.driver = self.start_webdriver(self.options)
+
+                    continue
+
+                words = next_station.split(" ")
+                print(words)
+
+                # Some stations have "(in case of traffic)" written next to the frequency. This will mess up the
+                # code we use to extract the frequency and mode, so get rid of it.
+                try:
+                    words.remove("(In")
+                    words.remove("case")
+                    words.remove("of")
+                    words.remove("traffic)")
+                except ValueError:
+                    pass
+
+                # Check to see if the station has a listed target, and use it if it does
+                if len(words) > 3 and "used:" not in next_station:  # It has a listed target
+                    target = str(words[-1::])
+                    specified_region = ''.join(char for char in target if char in string.ascii_letters)
+
+                    # North America is two words so the first word will be truncated
+                    # AFAIK there are no South America-beamed transmissions, so this is fine
+                    if specified_region == "America":
+                        specified_region = "North America"
+
+                    print("Target found!", specified_region)
+                else:
+                    specified_region = None
+
+                name = words[0]
+                frequency = words[1].strip("kHz")
+                mode = words[2]
+
+                if mode == "USB/AM" or "LSB/AM":
+                    mode = mode[:3]
+
+                if mode == "RTTY" or mode == "RTT":
+                    frequency = str(int(frequency) - 2)
+                    mode = "USB"
+
+                print(name, frequency, mode)
+
+                if "Search" not in frequency:
+                    start_time = self.find_start_time(time_remaining)
+                    current_time = datetime.datetime.utcnow().replace(microsecond=0)
+                    if start_time:
+                        delta_t = (start_time - current_time).total_seconds()
+                        print("Seconds to next station: " + str(delta_t))
+
+                        if delta_t <= how_early_to_start:
+                            print("Starting in <45s")
+                            print(name, frequency, mode)
+                            self.connect_to_kiwi(name, frequency, mode, specified_region, start_time,
+                                                 specified_record_time=specified_record_time)
+                    else:
+                        print("Nothing coming up soon...")
+                else:
+                    print("Nothing coming up soon...")
+
+                time.sleep(12)
+
+        except KeyboardInterrupt:
+            self.quit()
+
+    def quit(self):
+        self.driver.close()
+        self.driver.quit()
+        self.kiwisdr.quit()
+
+    def start_webdriver(self, options):
+        driver = webdriver.Firefox(self.geckodriver_path, options=options)
+        driver.get("http://www.priyom.org")
+        return driver
+
+    def __init__(self, geckodriver_path="C:\\Users\\user\\PycharmProjects\\PriyomAutoRecorder\\", debug=False):
+        self.kiwisdr = KiwiSDR.KiwiSDR(geckodriver_path, load_time=10, debug=debug)
+        self.options = Options()
+        self.options.headless = True
+        self.geckodriver_path = geckodriver_path
+        self.driver = self.start_webdriver(self.options)
+
+        self.link = '/html/body/div/div[1]/main/section/div[2]/ul/li'
+
+        self.stations_to_regions = \
+            {"hm01": "North America", "e11": "Mediterranean", "s11a": "Mediterranean", "m14": "Mediterranean",
+             "p03h": "Mediterranean", "f03l": "Mediterranean", "f03j": "Mediterranean", "f06": "Mediterranean",
+             "m12": "Mediterranean", "e06": "Mediterranean", "s06s": "Mediterranean", "m23": "Mediterranean",
+             "xpa2": "Pacific", "xpb": "Pacific", "v13": "Asia", "f01": "Asia", "m01": "Mediterranean",
+             "s06": "Mediterranean", "E11": "Mediterranean", "P03": "Mediterranean", "P03k": "Mediterranean"}
+
+        self.stations_to_transmission_lengths = \
+            {"hm01": 60, "e11": 12, "s11a": 20, "e06": 20, "s06": 20, "m01": 10, "m14": 15, "p03h": 5, "f03l": 4,
+             "f03j": 5, "f06": 16, "m12": 20, "s06s": 10, "m23": 20, "xpa2": 20, "xpb": 10, "v13": 20, "f01": 16,
+             "E07": 10, "P03": 10, "P03k": 10}
