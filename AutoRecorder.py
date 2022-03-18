@@ -7,7 +7,7 @@ geckodriver_path = os.path.abspath("./")
 output_path = "D:/Temp/"
 
 try:
-    monitor = CalendarMonitor.CalendarMonitor(output_path, debug=False)
+    monitor = CalendarMonitor.CalendarMonitor(output_path, geckodriver_path=geckodriver_path, debug=False)
     monitor.loop(output_path, debug=False)
 
 # If literally anything happens, terminate all the firefox processes so we don't leave
