@@ -82,5 +82,4 @@ class KiwiSDR:
             self.options.headless = True
 
         self.options.set_preference("media.volume_scale", "0.0")
-        os.chdir(path_to_webdriver)
         self.driver = webdriver.Firefox(executable_path=path_to_webdriver, options=self.options)
