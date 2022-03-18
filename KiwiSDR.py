@@ -76,7 +76,6 @@ class KiwiSDR:
         self.load_time = load_time  # How long to wait for the Pavlova/kiwiSDR interface to load
         self.path_to_webdriver = path_to_webdriver
         self.options = Options()
-        self.options.binary_location = path_to_webdriver
         self.out_directory = out_directory
 
         if not debug:

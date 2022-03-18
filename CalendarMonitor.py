@@ -202,7 +202,6 @@ class CalendarMonitor:
         self.kiwisdr = KiwiSDR.KiwiSDR(geckodriver_path, out_directory, load_time=10, debug=debug)
         self.options = Options()
         self.options.headless = True
-        self.options.binary_location = geckodriver_path
 
         self.geckodriver_path = geckodriver_path
         self.driver = self.start_webdriver(self.options)
