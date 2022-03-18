@@ -34,7 +34,7 @@ class KiwiSDR:
             self.driver.close()
             self.quit()
             print("Launching new browser...")
-            self.driver = webdriver.Firefox(self.path_to_webdriver, options=self.options)
+            self.driver = webdriver.Firefox(executable_path=self.path_to_webdriver, options=self.options)
 
             # try again
             time.sleep(5)

@@ -194,7 +194,7 @@ class CalendarMonitor:
         self.kiwisdr.quit()
 
     def start_webdriver(self, options):
-        driver = webdriver.Firefox(self.geckodriver_path, options=options)
+        driver = webdriver.Firefox(executable_path=self.geckodriver_path, options=options)
         driver.get("http://www.priyom.org")
         return driver
 
