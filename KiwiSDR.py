@@ -8,10 +8,11 @@ import time
 import kiwirecorder
 import os
 
+
 class KiwiSDR:
-    @staticmethod
-    def getLink(region, frequency, mode):
-        link = "http://s.printf.cc/"
+
+    def getLink(self, region, frequency, mode):
+        link = self.pavlova_link
         regions = {"North America": "n", "Asia": "a", "Pacific": "p", "Mediterranean": "m", "East Asia": "a"}
         link += f"#{regions[region]}/"
         link += str(frequency)
@@ -77,6 +78,7 @@ class KiwiSDR:
         self.path_to_webdriver = path_to_webdriver
         self.options = Options()
         self.out_directory = out_directory
+        self.pavlova_link = "/var/www/html/Pavlova/index.html"
 
         if not debug:
             self.options.headless = True
