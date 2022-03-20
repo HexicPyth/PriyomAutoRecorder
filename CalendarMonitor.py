@@ -140,6 +140,7 @@ class CalendarMonitor:
             time.sleep(30)
             time_left -= 30
             time_slept += 30
+
             if time_slept % 60 == 0:
                 print(f"Calendarmonitor still sleeping; {time_left} seconds left")
 
@@ -156,9 +157,13 @@ class CalendarMonitor:
                     if start_time:
                         current_time = datetime.datetime.utcnow()
 
-                        if start_time > current_time:
-                            seconds_to_start_time = (start_time - current_time).seconds
-                        else:
+                        try:
+                            if start_time > current_time:
+                                seconds_to_start_time = (start_time - current_time).seconds
+                            else:
+                                seconds_to_start_time = 0
+
+                        except OverflowError:
                             seconds_to_start_time = 0
 
                         print(start_time)
@@ -213,7 +218,7 @@ class CalendarMonitor:
             {"hm01": "North America", "e11": "Mediterranean", "s11a": "Mediterranean", "m14": "Mediterranean",
              "p03h": "Mediterranean", "f03l": "Mediterranean", "f03j": "Mediterranean", "f06": "Mediterranean",
              "m12": "Mediterranean", "e06": "Mediterranean", "s06s": "Mediterranean", "m23": "Mediterranean",
-             "xpa2": "Pacific", "xpb": "Pacific", "v13": "Asia", "f01": "Asia", "m01": "Mediterranean",
+             "xpa2": "Pacific", "xpb": "Mediterranean", "v13": "Asia", "f01": "Asia", "m01": "Mediterranean",
              "s06": "Mediterranean", "E11": "Mediterranean", "P03": "Mediterranean", "P03k": "Mediterranean"}
 
         self.stations_to_transmission_lengths = \
