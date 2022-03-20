@@ -39,30 +39,32 @@ class CalendarMonitor:
         print(f"Current time: {current_time}")
 
         if ("MINUTES" in _words) or ("MINUTE" in _words) or ("SECONDS" in _words) or ("HOURS" in _words):
+            try:
+                if _words[1] == "HOURS":
+                    minutes_remaining = int(_words[0] * 60)
+                    start_time = current_time + datetime.timedelta(minutes=minutes_remaining)
 
-            if _words[1] == "HOURS":
-                minutes_remaining = int(_words[0] * 60)
-                start_time = current_time + datetime.timedelta(minutes=minutes_remaining)
+                if _words[1] == "MINUTE":
+                    minutes_remaining = 1
+                    start_time = current_time + datetime.timedelta(minutes=minutes_remaining)
+                    if start_time.second != 0:
+                        # Subtract a second so that if this code runs exactly 15s before a station we don't miss it
 
-            if _words[1] == "MINUTE":
-                minutes_remaining = 1
-                start_time = current_time + datetime.timedelta(minutes=minutes_remaining)
-                if start_time.second != 0:
-                    # Subtract a second so that if this code runs exactly 15s before a station we don't miss it
+                        start_time = start_time - datetime.timedelta(seconds=1)
 
-                    start_time = start_time - datetime.timedelta(seconds=1)
+                elif _words[1] == "SECONDS":
+                    start_time = current_time + datetime.timedelta(seconds=1)  # START LIKE, NOW!!!
+                    start_time = start_time.replace(second=0).replace(microsecond=0)
+                    start_time = self.round_minutes(start_time, 5)
+                    return start_time
 
-            elif _words[1] == "SECONDS":
-                start_time = current_time + datetime.timedelta(seconds=1)  # START LIKE, NOW!!!
-                start_time = start_time.replace(second=0).replace(microsecond=0)
-                start_time = self.round_minutes(start_time, 5)
-                return start_time
-
-            else:  # X MINUTES REMAINING
-                minutes_remaining = int(_words[0])
-                start_time = current_time + datetime.timedelta(minutes=minutes_remaining)
-                start_time = start_time - datetime.timedelta(seconds=30)
-                start_time = start_time.replace(second=0).replace(microsecond=0)
+                else:  # X MINUTES REMAINING
+                    minutes_remaining = int(_words[0])
+                    start_time = current_time + datetime.timedelta(minutes=minutes_remaining)
+                    start_time = start_time - datetime.timedelta(seconds=30)
+                    start_time = start_time.replace(second=0).replace(microsecond=0)
+            except OverflowError:
+                start_time = current_time + datetime.timedelta(seconds=30)
 
             # print(f"{minutes_remaining} minutes remaining")
             start_time = self.round_minutes(start_time, 5)
