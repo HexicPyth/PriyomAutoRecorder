@@ -77,6 +77,22 @@ class CalendarMonitor:
         recorder_thread = recorderthread.Recorder(self, station_info, out_directory)
         recorder_thread.record(self)
 
+    @staticmethod
+    def split_stations(_words):
+        stations = []
+        previous_index = 0
+        _words[len(_words) - 1] += "\n"  # Make the multiple-station detector detect the final station too
+        for index, item in enumerate(_words):
+            if "\n" in item:
+                station = _words[previous_index:index]
+                station.append(item.split("\n")[0])
+                _words[index] = item.split("\n")[1]
+                previous_index = index
+                print(f"Found station: {station}")
+                stations.append(station)
+
+        return stations
+
     def find_next_station(self):
         # If the user specified a station to immediately start recording, do that, and then operate normally
         # from the Priyom calendar after the recording is complete.
@@ -92,46 +108,51 @@ class CalendarMonitor:
             self.driver = self.start_webdriver(self.options)
             return None
 
+        stations_info = []
         words = next_station.split(" ")
-        print(words)
 
-        # Some stations have "(in case of traffic)" written next to the frequency. This will mess up the
-        # code we use to extract the frequency and mode, so get rid of it.
-        try:
-            words.remove("(In")
-            words.remove("case")
-            words.remove("of")
-            words.remove("traffic)")
-        except ValueError:
-            pass
+        words = self.split_stations(words)
+        for station in words:
 
-        # Check to see if the station has a listed target, and use it if it does
-        if len(words) > 3 and "used:" not in next_station:  # It has a listed target
-            target = str(words[-1::])
-            specified_region = ''.join(char for char in target if char in string.ascii_letters)
+            # Some stations have "(in case of traffic)" written next to the frequency. This will mess up the
+            # code we use to extract the frequency and mode, so get rid of it.
+            try:
+                station.remove("(In")
+                station.remove("case")
+                station.remove("of")
+                station.remove("traffic)")
+            except ValueError:
+                pass
 
-            # North America is two words so the first word will be truncated
-            # AFAIK there are no South America-beamed transmissions, so this is fine
-            if specified_region == "America":
-                specified_region = "North America"
+            # Check to see if the station has a listed target, and use it if it does
+            if len(station) > 3 and "used:" not in next_station:  # It has a listed target
+                target = str(station[-1::])
+                specified_region = ''.join(char for char in target if char in string.ascii_letters)
 
-            print("Target found!", specified_region)
-        else:
-            specified_region = None
+                # North America is two words so the first word will be truncated
+                # AFAIK there are no South America-beamed transmissions, so this is fine
+                if specified_region == "America":
+                    specified_region = "North America"
 
-        name = words[0]
-        frequency = words[1].strip("kHz")
-        mode = words[2]
+                print("Target found!", specified_region)
+            else:
+                specified_region = None
 
-        if mode == "USB/AM" or "LSB/AM":
-            mode = mode[:3]
+            name = station[0]
+            frequency = station[1].strip("kHz")
+            mode = station[2]
 
-        if mode == "RTTY" or mode == "RTT":
-            frequency = str(int(frequency) - 2)
-            mode = "USB"
+            if mode == "USB/AM" or "LSB/AM":
+                mode = mode[:3]
 
-        print(name, frequency, mode, time_remaining)
-        return name, frequency, mode, time_remaining, specified_region
+            if mode == "RTTY" or mode == "RTT":
+                frequency = str(int(frequency) - 2)
+                mode = "USB"
+
+            stations_info.append([name, frequency, mode, time_remaining])
+
+        print(stations_info)
+        return stations_info
 
     @staticmethod
     def sleep_until_next_station(seconds):
@@ -152,43 +173,57 @@ class CalendarMonitor:
         try:
             while True:
 
-                name, frequency, mode, time_remaining, specified_region = self.find_next_station()
-                if (name, frequency, mode, time_remaining, specified_region) and "Search" not in frequency:
-                    start_time = self.find_start_time(time_remaining)
+                # [name, frequency, mode, time_remaining, region]
+                station_info = self.find_next_station()
+                seconds_to_start_time = 0
 
-                    if start_time:
-                        current_time = datetime.datetime.utcnow()
+                for station in station_info:
+                    time.sleep(1)
 
-                        try:
-                            if start_time > current_time:
-                                seconds_to_start_time = (start_time - current_time).seconds
-                            else:
+                    name, frequency, mode, time_remaining = station
+                    if len(station) > 4:
+                        specified_region = station[4]
+                    else:
+                        specified_region = None
+
+                    if (name, frequency, mode, time_remaining, specified_region) and "Search" not in frequency:
+                        start_time = self.find_start_time(time_remaining)
+
+                        if start_time:
+                            current_time = datetime.datetime.utcnow()
+
+                            try:
+                                if start_time > current_time:
+                                    seconds_to_start_time = (start_time - current_time).seconds
+                                else:
+                                    seconds_to_start_time = 0
+
+                            except OverflowError:
                                 seconds_to_start_time = 0
 
-                        except OverflowError:
-                            seconds_to_start_time = 0
+                            print(start_time)
 
-                        print(start_time)
+                            station_info = [name, frequency, mode, specified_region, start_time, specified_record_time]
 
-                        station_info = [name, frequency, mode, specified_region, start_time, specified_record_time]
+                            recorder_thread = threading.Thread(target=self.launch_recorder_thread,
+                                                               args=(station_info, out_directory), name='recorderThread')
 
-                        recorder_thread = threading.Thread(target=self.launch_recorder_thread,
-                                                           args=(station_info, out_directory), name='recorderThread')
+                            recorder_thread.start()
 
-                        recorder_thread.start()
+                            time_to_resume = datetime.datetime.utcnow() + \
+                                             datetime.timedelta(seconds=seconds_to_start_time + 30)
 
-                        time_to_resume = datetime.datetime.utcnow() + \
-                                         datetime.timedelta(seconds=seconds_to_start_time + 30)
+                            print(f"Recording of {name} @ {frequency}kHz {mode.upper()} queued for {start_time};"
+                                  f" sleeping until {time_to_resume}...")
 
-                        print(f"Recording of {name} @ {frequency}kHz {mode.upper()} queued for {start_time};"
-                              f" sleeping until {time_to_resume}...")
 
-                        self.sleep_until_next_station(seconds_to_start_time + 30)
-
+                        else:
+                            print("Nothing coming up soon...")
                     else:
                         print("Nothing coming up soon...")
-                else:
-                    print("Nothing coming up soon...")
+
+                if seconds_to_start_time != 0:
+                    self.sleep_until_next_station(seconds_to_start_time + 30)
 
                 time.sleep(12)
 
