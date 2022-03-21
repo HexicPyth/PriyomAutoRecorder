@@ -249,7 +249,7 @@ class CalendarMonitor:
         self.driver = self.start_webdriver(self.options)
         self.recording_queue = queue.Queue()
         self.debug = debug
-        self.link = '/html/body/div/div[1]/main/section/div[2]/ul/li'
+        self.link = '/html/body/div/div[1]/main/section/div[2]/ul'
 
         self.stations_to_regions = \
             {"hm01": "North America", "e11": "Mediterranean", "s11a": "Mediterranean", "m14": "Mediterranean",
