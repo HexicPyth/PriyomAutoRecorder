@@ -99,7 +99,7 @@ class CalendarMonitor:
 
         # Scrape calendar data from priyom.org
         try:
-            next_station = self.driver.find_element_by_xpath("/html/body/div/div[1]/main/section/div[2]/ul/li").text
+            next_station = self.driver.find_element_by_xpath(self.link).text
             time_remaining = self.driver.find_element_by_xpath("/html/body/div/div[1]/main/section/div[2]/h3").text
         except common.exceptions.WebDriverException:
             traceback.print_exc()
@@ -175,6 +175,7 @@ class CalendarMonitor:
 
                 # [name, frequency, mode, time_remaining, region]
                 station_info = self.find_next_station()
+                print(station_info)
                 seconds_to_start_time = 0
 
                 for station in station_info:
