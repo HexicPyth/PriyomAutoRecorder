@@ -17,7 +17,7 @@ class CalendarMonitor:
 
     @staticmethod
     def round_minutes(some_datetime, step):
-        """ round up to nearest step-minutes
+        """ round to nearest step-minutes
         Written by David Chan from StackOverflow
         https://stackoverflow.com/a/55013608"""
 
@@ -49,7 +49,6 @@ class CalendarMonitor:
                     start_time = current_time + datetime.timedelta(minutes=minutes_remaining)
                     if start_time.second != 0:
                         # Subtract a second so that if this code runs exactly 15s before a station we don't miss it
-
                         start_time = start_time - datetime.timedelta(seconds=1)
 
                 elif _words[1] == "SECONDS":
@@ -260,6 +259,9 @@ class CalendarMonitor:
              "s06": "Mediterranean", "E11": "Mediterranean", "P03": "Mediterranean", "P03k": "Mediterranean"}
 
         self.stations_to_transmission_lengths = \
-            {"hm01": 29, "e11": 12, "s11a": 10, "e06": 20, "s06": 20, "m01": 10, "m14": 15, "p03h": 5, "f03l": 4,
-             "f03j": 5, "f06": 16, "m12": 15, "s06s": 10, "m23": 20, "xpa2": 10, "xpb": 10, "v13": 20, "f01": 16,
-             "E07": 10, "P03": 10, "P03k": 10, "P03e":  10, "f03d": 5, "f03k": 5, "f06a": 5}
+            {"hm01": 29, "v13": 20,
+             "e06": 20, "E07": 10, "e11": 12, "s06": 20, "s06s": 10, "s11a": 10,
+             "m01": 10, "m12": 15, "m14": 15, "m23": 20,
+             "f01": 16,  "f03d": 2.5, "f03j": 2.5, "f03k": 2.5, "f03l": 2.5, "f06": 16, "f06a": 5,
+             "P03": 10, "P03e": 10, "p03h": 5, "P03k": 10,
+             "xpa": 10, "xpa2": 10, "xpb": 10}
