@@ -47,6 +47,8 @@ class Recorder:
                 else:
                     print(f"Error: All kiwis busy; Giving up on recording {name} after trying to connect 10 times...")
 
+            self.kiwisdr.quit()
+
         except OSError:
             traceback.print_exc()
 
