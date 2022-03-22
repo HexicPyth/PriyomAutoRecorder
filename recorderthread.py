@@ -1,5 +1,8 @@
 import datetime
 import time
+
+import urllib3.exceptions
+
 import KiwiSDR
 import traceback
 
@@ -47,7 +50,10 @@ class Recorder:
                 else:
                     print(f"Error: All kiwis busy; Giving up on recording {name} after trying to connect 10 times...")
 
-            self.kiwisdr.quit()
+            try:
+                self.kiwisdr.quit()
+            except urllib3.exceptions.MaxRetryError:
+                pass
 
         except OSError:
             traceback.print_exc()
