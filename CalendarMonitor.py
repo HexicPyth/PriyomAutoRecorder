@@ -252,7 +252,7 @@ class CalendarMonitor:
         self.link = '/html/body/div/div[1]/main/section/div[2]/ul'
 
         self.stations_to_regions = \
-            {"hm01": "North America", "e11": "Mediterranean", "s11a": "Mediterranean", "m14": "Mediterranean",
+            {"hm01": "North America", "e11": "Mediterranean", "s11a": "Mediterranean", "m14": "Pacific",
              "p03h": "Mediterranean", "f03l": "Mediterranean", "f03j": "Mediterranean", "f06": "Mediterranean",
              "m12": "Mediterranean", "e06": "Mediterranean", "s06s": "Mediterranean", "m23": "Mediterranean",
              "xpa2": "Pacific", "xpb": "Mediterranean", "v13": "Asia", "f01": "Asia", "m01": "Mediterranean",
@@ -264,4 +264,4 @@ class CalendarMonitor:
              "m01": 10, "m12": 15, "m14": 15, "m23": 20,
              "f01": 10,  "f03d": 2.5, "f03j": 2.5, "f03k": 2.5, "f03l": 2.5, "f06": 10, "f06a": 5,
              "P03": 10, "P03e": 10, "p03h": 5, "P03k": 10, "P03g": 10,
-             "xpa": 10, "xpa2": 10, "xpb": 10}
+             "xpa": 10, "xpa2": 5, "xpb": 10}
