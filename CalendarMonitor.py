@@ -44,7 +44,7 @@ class CalendarMonitor:
                     minutes_remaining = int(_words[0] * 60)
                     start_time = current_time + datetime.timedelta(minutes=minutes_remaining)
 
-                if _words[1] == "MINUTE":
+                if _words[1] == "MINUTE" or _words[2] == "MINUTE":
                     minutes_remaining = 1
                     start_time = current_time + datetime.timedelta(minutes=minutes_remaining)
                     if start_time.second != 0:
