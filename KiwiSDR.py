@@ -26,10 +26,9 @@ class KiwiSDR:
         try:
             self.driver.get(redirector)
 
-#        except (selenium.common.exceptions.InvalidSessionIdException, ConnectionError,
-#                selenium.common.exceptions.WebDriverException, ConnectionRefusedError,
-#                urllib3.exceptions.MaxRetryError):
-        except:
+        except (selenium.common.exceptions.InvalidSessionIdException, ConnectionError,
+                selenium.common.exceptions.WebDriverException, ConnectionRefusedError,
+                urllib3.exceptions.MaxRetryError):
             # Restart the browser and try again
             print("InvalidSessionID or connection issues, restarting the browser and trying again")
             self.driver.close()
@@ -70,16 +69,20 @@ class KiwiSDR:
 
     def quit(self):
         # Kill all of the children so we don't leave Firefox orphans laying around
-        self.driver.close()
-        self.driver.quit()
+        try:
+            self.driver.close()
+            self.driver.quit()
+        except selenium.common.exceptions.InvalidSessionIdException:
+            pass
 
     def __init__(self, path_to_webdriver, out_directory, load_time=7, debug=False):
         self.load_time = load_time  # How long to wait for the Pavlova/kiwiSDR interface to load
         self.path_to_webdriver = path_to_webdriver
         self.options = Options()
         self.out_directory = out_directory
-        self.pavlova_link = "/var/www/html/Pavlova/index.html"
 
+        self.pavlova_link = "/var/www/html/Pavlova/index.html"
+        #self.pavlova_link = "http://s.printf.cc/"
         if not debug:
             self.options.headless = True
 

@@ -1,0 +1,11 @@
+Name Frequency Region/Target Day Time
+V13_NewSchedule 7688,13974 Mediterranean Weekdays 17:43
+V13_NewSchedule 7688,13974 Russia Weekdays 12:30
+V13_NewSchedule 7688,13974 Russia Weekdays 13:00
+V13_NewSchedule 7688,13974 Russia Weekdays 13:30
+V13_NewSchedule 7688,13974 Russia Weekdays 14:00
+V13_Newschedule 15890,18040 Korea Weekdays 00:00
+V13_Newschedule 15890,18040 Korea Weekdays 00:30
+V13_Newschedule 15890,18040 Korea Weekdays 01:00
+V13_Newschedule 15890,18040 Korea Weekdays 01:30
+V13_Newschedule 15890,18040 Korea Weekdays 02:00

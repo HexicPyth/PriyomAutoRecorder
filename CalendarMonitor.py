@@ -9,7 +9,7 @@ import traceback
 import queue
 import recorderthread
 import threading
-import os
+import CustomCalendarParser
 from selenium import common
 
 
@@ -77,7 +77,7 @@ class CalendarMonitor:
         recorder_thread.record(self)
 
     @staticmethod
-    def split_stations(_words):
+    def split_stations(_words, quiet=True):
         stations = []
         previous_index = 0
         _words[len(_words) - 1] += "\n"  # Make the multiple-station detector detect the final station too
@@ -87,12 +87,13 @@ class CalendarMonitor:
                 station.append(item.split("\n")[0])
                 _words[index] = item.split("\n")[1]
                 previous_index = index
-                print(f"Found station: {station}")
+                if not quiet:
+                    print(f"Found station: {station}")
                 stations.append(station)
 
         return stations
 
-    def find_next_station(self):
+    def find_next_station(self, quiet=True):
         # If the user specified a station to immediately start recording, do that, and then operate normally
         # from the Priyom calendar after the recording is complete.
 
@@ -110,7 +111,7 @@ class CalendarMonitor:
         stations_info = []
         words = next_station.split(" ")
 
-        words = self.split_stations(words)
+        words = self.split_stations(words, quiet=quiet)
         for station in words:
 
             # Some stations have "(in case of traffic)" written next to the frequency. This will mess up the
@@ -133,7 +134,8 @@ class CalendarMonitor:
                 if specified_region == "America":
                     specified_region = "North America"
 
-                print("Target found!", specified_region)
+                if not quiet:
+                    print("Target found!", specified_region)
             else:
                 specified_region = None
 
@@ -148,82 +150,100 @@ class CalendarMonitor:
                 frequency = str(int(frequency) - 2)
                 mode = "USB"
 
-            stations_info.append([name, frequency, mode, time_remaining])
+            stations_info.append([name, frequency, mode, time_remaining, specified_region])
 
-        print(stations_info)
         return stations_info
 
-    @staticmethod
-    def sleep_until_next_station(seconds):
-        time_left = seconds
-        time_slept = 0
+    def start_recording(self, station, out_directory, absolute_start_time=False):
+        # [name, frequency, mode, time_remaining, region]
 
-        while time_left > 0:
-            time.sleep(30)
-            time_left -= 30
-            time_slept += 30
+        name, frequency, mode, time_remaining, specified_region = station
 
-            if time_slept % 60 == 0:
-                print(f"Calendarmonitor still sleeping; {time_left} seconds left")
+        if (name, frequency, mode, time_remaining, specified_region) and "Search" not in frequency:
+            if absolute_start_time:
+                start_time = station[3]
+            else:
+                start_time = self.find_start_time(time_remaining)
+
+            if start_time:
+                current_time = datetime.datetime.utcnow()
+
+                try:
+                    if start_time > current_time:
+                        seconds_to_start_time = (start_time - current_time).seconds
+                    else:
+                        seconds_to_start_time = 0
+
+                except OverflowError:
+                    seconds_to_start_time = 0
+
+                print(start_time)
+
+                station_info = [name, frequency, mode, specified_region, start_time, None]
+
+                recorder_thread = threading.Thread(target=self.launch_recorder_thread,
+                                                   args=(station_info, out_directory), name='recorderThread')
+
+                recorder_thread.start()
+
+                time_to_resume = datetime.datetime.utcnow() + \
+                                 datetime.timedelta(seconds=seconds_to_start_time + 30)
+
+                print(f"Recording of {name} @ {frequency}kHz {mode.upper()} queued for {start_time};")
+
+
+            else:
+                print("Nothing coming up soon...")
+        else:
+            print("Nothing coming up soon...")
+
+        return seconds_to_start_time
 
     def loop(self, out_directory, debug=False, start=None):
-        specified_record_time = None  # This doesnt do anything rn
-
         try:
             while True:
+                time.sleep(1)
+                current_time = datetime.datetime.utcnow()
 
-                # [name, frequency, mode, time_remaining, region]
-                station_info = self.find_next_station()
-                print(station_info)
+                station_info = self.find_next_station(quiet=True)
                 seconds_to_start_time = 0
 
-                for station in station_info:
-                    time.sleep(1)
+                if current_time > self.last_station_time:
+                    _start_time = 0
+                    for station in station_info:
+                        print(station)
+                        print("!!!")
+                        seconds_to_start_time = self.start_recording(station, out_directory)
+                        start_time = current_time + datetime.timedelta(seconds=seconds_to_start_time)
+                        _start_time = start_time
 
-                    name, frequency, mode, time_remaining = station
-                    if len(station) > 4:
-                        specified_region = station[4]
-                    else:
-                        specified_region = None
+                        print(f"Queueing {station[0]} {station[1]}kHz{station[2]} @ {start_time} "
+                              f"(Target: {station[4]})")
 
-                    if (name, frequency, mode, time_remaining, specified_region) and "Search" not in frequency:
-                        start_time = self.find_start_time(time_remaining)
+                    print(f"Sleeping until {self.last_station_time}")
+                    self.last_station_time = _start_time
+                #else:
+                #    for station in station_info:
+                #        print(f"{station[0]} {station[1]}kHz{station[2]} @ {self.last_station_time} "
+                #              f"(Target: {station[4]}) is already queued;")
 
-                        if start_time:
-                            current_time = datetime.datetime.utcnow()
+                #  Custom Calendar Station Handling
+                custom_calendar_stations = CustomCalendarParser.find_next_station()[0]
+                if current_time > self.last_customcalendarstation_time:
+                    for station in custom_calendar_stations:
+                        name, frequency, region, start_time = station
+                        print("Queueing ", end='')
+                        print(name, frequency, region, start_time)
+                        # name, frequency, mode, time_remaining, specified_region = station
 
-                            try:
-                                if start_time > current_time:
-                                    seconds_to_start_time = (start_time - current_time).seconds
-                                else:
-                                    seconds_to_start_time = 0
+                        self.start_recording([name+str(frequency)+"kHz", frequency, "AM", start_time, region],
+                                             out_directory, absolute_start_time=True)
 
-                            except OverflowError:
-                                seconds_to_start_time = 0
+                        self.last_customcalendarstation_time = start_time
 
-                            print(start_time)
-
-                            station_info = [name, frequency, mode, specified_region, start_time, specified_record_time]
-
-                            recorder_thread = threading.Thread(target=self.launch_recorder_thread,
-                                                               args=(station_info, out_directory), name='recorderThread')
-
-                            recorder_thread.start()
-
-                            time_to_resume = datetime.datetime.utcnow() + \
-                                             datetime.timedelta(seconds=seconds_to_start_time + 30)
-
-                            print(f"Recording of {name} @ {frequency}kHz {mode.upper()} queued for {start_time};"
-                                  f" sleeping until {time_to_resume}...")
-
-
-                        else:
-                            print("Nothing coming up soon...")
-                    else:
-                        print("Nothing coming up soon...")
-
-                if seconds_to_start_time != 0:
-                    self.sleep_until_next_station(seconds_to_start_time + 30)
+                #else:
+                #    for station in custom_calendar_stations:
+                #        print(f"{station[0]} {station[1]}kHz @ {station[3]} (Target: {station[2]}) is already queued")
 
                 time.sleep(12)
 
@@ -250,7 +270,8 @@ class CalendarMonitor:
         self.recording_queue = queue.Queue()
         self.debug = debug
         self.link = '/html/body/div/div[1]/main/section/div[2]/ul'
-
+        self.last_customcalendarstation_time = datetime.datetime.utcnow()
+        self.last_station_time = datetime.datetime.utcnow()
         self.stations_to_regions = \
             {"hm01": "North America", "e11": "Mediterranean", "s11a": "Mediterranean", "m14": "Pacific",
              "p03h": "Mediterranean", "f03l": "Mediterranean", "f03j": "Mediterranean", "f06": "Mediterranean",
@@ -260,7 +281,7 @@ class CalendarMonitor:
 
         self.stations_to_transmission_lengths = \
             {"hm01": 29, "v13": 20,
-             "e06": 20, "E07": 10, "e11": 12, "s06": 20, "s06s": 10, "s11a": 10,
+             "e06": 20, "E07": 15, "e11": 12, "s06": 20, "s06s": 10, "s11a": 10,
              "m01": 10, "m12": 15, "m14": 15, "m23": 20,
              "f01": 10,  "f03d": 2.5, "f03j": 2.5, "f03k": 2.5, "f03l": 2.5, "f06": 10, "f06a": 5,
              "P03": 10, "P03e": 10, "p03h": 5, "P03k": 10, "P03g": 10,
