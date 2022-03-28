@@ -13,7 +13,8 @@ class KiwiSDR:
 
     def getLink(self, region, frequency, mode):
         link = self.pavlova_link
-        regions = {"North America": "n", "Asia": "a", "Pacific": "p", "Mediterranean": "m", "East Asia": "a"}
+        regions = {"North America": "n", "Asia": "a", "Pacific": "p", "Mediterranean": "m", "East Asia": "a",
+                   "Russia": "r"}
         link += f"#{regions[region]}/"
         link += str(frequency)
         link += mode
