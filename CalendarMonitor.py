@@ -194,8 +194,10 @@ class CalendarMonitor:
 
             else:
                 print("Nothing coming up soon...")
+                seconds_to_start_time = 0
         else:
             print("Nothing coming up soon...")
+            seconds_to_start_time = 0
 
         return seconds_to_start_time
 
