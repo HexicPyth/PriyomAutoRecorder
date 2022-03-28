@@ -228,22 +228,25 @@ class CalendarMonitor:
                 #              f"(Target: {station[4]}) is already queued;")
 
                 #  Custom Calendar Station Handling
-                custom_calendar_stations = CustomCalendarParser.find_next_station()[0]
-                if current_time > self.last_customcalendarstation_time:
-                    for station in custom_calendar_stations:
-                        name, frequency, region, start_time = station
-                        print("Queueing ", end='')
-                        print(name, frequency, region, start_time)
-                        # name, frequency, mode, time_remaining, specified_region = station
+                try:
+                    custom_calendar_stations = CustomCalendarParser.find_next_station()[0]
+                    if current_time > self.last_customcalendarstation_time:
+                        for station in custom_calendar_stations:
+                            name, frequency, region, start_time = station
+                            print("Queueing ", end='')
+                            print(name, frequency, region, start_time)
+                            # name, frequency, mode, time_remaining, specified_region = station
 
-                        self.start_recording([name+str(frequency)+"kHz", frequency, "AM", start_time, region],
-                                             out_directory, absolute_start_time=True)
+                            self.start_recording([name+str(frequency)+"kHz", frequency, "AM", start_time, region],
+                                                 out_directory, absolute_start_time=True)
 
-                        self.last_customcalendarstation_time = start_time
+                            self.last_customcalendarstation_time = start_time
 
-                #else:
-                #    for station in custom_calendar_stations:
-                #        print(f"{station[0]} {station[1]}kHz @ {station[3]} (Target: {station[2]}) is already queued")
+                    #else:
+                    #    for station in custom_calendar_stations:
+                    #        print(f"{station[0]} {station[1]}kHz @ {station[3]} (Target: {station[2]}) is already queued")
+                except IndexError:
+                    pass
 
                 time.sleep(12)
 
