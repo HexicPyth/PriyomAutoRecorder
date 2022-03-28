@@ -70,8 +70,13 @@ class Recorder:
             delta_t = (start_time - current_time).seconds
 
             if not calendarmonitor.debug:
-                print(f"RecorderThread: {name} starts in {delta_t} seconds; sleeping for {delta_t - 30}")
-                time.sleep(delta_t - 30)
+                if delta_t - 30 > 0:
+                    time_to_sleep = delta_t - 30
+                else:
+                    time_to_sleep = 0
+
+                print(f"RecorderThread: {name} starts in {delta_t} seconds; sleeping for {time_to_sleep}")
+                time.sleep(time_to_sleep)
                 print("RecorderThread: Recording....")
                 self.connect_to_kiwi(name, frequency, mode, known_region, start_time, specified_record_time)
 
