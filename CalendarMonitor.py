@@ -194,10 +194,10 @@ class CalendarMonitor:
 
             else:
                 print("Nothing coming up soon...")
-                seconds_to_start_time = 0
+                seconds_to_start_time = None
         else:
             print("Nothing coming up soon...")
-            seconds_to_start_time = 0
+            seconds_to_start_time = None
 
         return seconds_to_start_time
 
@@ -216,17 +216,19 @@ class CalendarMonitor:
                         print(station)
                         print("!!!")
                         seconds_to_start_time = self.start_recording(station, out_directory)
-                        start_time = current_time + datetime.timedelta(seconds=seconds_to_start_time)
-                        _start_time = start_time
+                        if seconds_to_start_time:
+                            start_time = current_time + datetime.timedelta(seconds=seconds_to_start_time)
+                            _start_time = start_time
 
-                        print(f"Queueing {station[0]} {station[1]}kHz{station[2]} @ {start_time} "
-                              f"(Target: {station[4]})")
+                            print(f"Queueing {station[0]} {station[1]}{station[2]} @ {start_time} "
+                                  f"(Target: {station[4]})")
 
-                    print(f"Sleeping until {self.last_station_time}")
                     self.last_station_time = _start_time
+                    print(f"Sleeping until {self.last_station_time}")
+
                 #else:
                 #    for station in station_info:
-                #        print(f"{station[0]} {station[1]}kHz{station[2]} @ {self.last_station_time} "
+                #        print(f"{station[0]} {station[1]}{station[2]} @ {self.last_station_time} "
                 #              f"(Target: {station[4]}) is already queued;")
 
                 #  Custom Calendar Station Handling
