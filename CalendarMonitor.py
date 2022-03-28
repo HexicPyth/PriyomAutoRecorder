@@ -211,7 +211,7 @@ class CalendarMonitor:
                 seconds_to_start_time = 0
 
                 if current_time > self.last_station_time:
-                    _start_time = 0
+                    _start_time = None
                     for station in station_info:
                         print(station)
                         print("!!!")
@@ -223,8 +223,9 @@ class CalendarMonitor:
                             print(f"Queueing {station[0]} {station[1]}{station[2]} @ {start_time} "
                                   f"(Target: {station[4]})")
 
-                    self.last_station_time = _start_time
-                    print(f"Sleeping until {self.last_station_time}")
+                    if _start_time:
+                        self.last_station_time = _start_time
+                        print(f"Sleeping until {self.last_station_time}")
 
                 #else:
                 #    for station in station_info:
