@@ -81,7 +81,7 @@ class KiwiSDR:
         self.options = Options()
         self.out_directory = out_directory
 
-        self.pavlova_link = "/var/www/html/Pavlova/index.html"
+        self.pavlova_link = "file:///var/www/html/Pavlova/index.html"
         #self.pavlova_link = "http://s.printf.cc/"
         if not debug:
             self.options.headless = True
