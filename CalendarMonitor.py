@@ -179,7 +179,7 @@ class CalendarMonitor:
 
                 print(start_time)
 
-                station_info = [name, frequency, mode, specified_region, start_time, None]
+                station_info = [name, frequency.split(",")[0], mode, specified_region, start_time, None]
 
                 recorder_thread = threading.Thread(target=self.launch_recorder_thread,
                                                    args=(station_info, out_directory), name='recorderThread')
