@@ -66,7 +66,9 @@ class CalendarMonitor:
                 start_time = current_time + datetime.timedelta(seconds=30)
 
             # print(f"{minutes_remaining} minutes remaining")
-            start_time = self.round_minutes(start_time, 5)
+            if not ("MINUTE" in _words and "MINUTES" not in _words):
+                start_time = self.round_minutes(start_time, 5)
+
             print("Starting at " + str(start_time))
 
             return start_time
