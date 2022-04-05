@@ -7,7 +7,7 @@ from selenium.webdriver.firefox.options import Options
 import time
 import kiwirecorder
 import os
-
+import random
 
 class KiwiSDR:
 
@@ -22,6 +22,7 @@ class KiwiSDR:
 
     def navigate(self, redirector):
         # Navigate the headless webdriver to a URL
+        time.sleep(random.randint(0,25))
         print("Navigating to " + redirector)
 
         try:
@@ -52,8 +53,15 @@ class KiwiSDR:
         print("Connected to " + raw_url)
         server_and_port = raw_url.split(":")
         server_and_port.pop(0)  # remove the http:// or https://
-        server = server_and_port[0].strip("/")
-        port = server_and_port[1].split("/?f")[0]
+
+        if raw_url.count(':') >= 2:
+            server = server_and_port[0].strip("/")
+            port = server_and_port[1].split("/?f")[0]
+        else:
+            server = server_and_port[0].strip("/")
+            port = "80"
+
+        print(f"Selected kiwiSDR {server, port}!")
 
         return server, port
 
@@ -82,8 +90,8 @@ class KiwiSDR:
         self.options = Options()
         self.out_directory = out_directory
 
-        self.pavlova_link = "file:///var/www/html/Pavlova/index.html"
-        #self.pavlova_link = "http://s.printf.cc/"
+        #self.pavlova_link = "file:///var/www/html/Pavlova/index.html"
+        self.pavlova_link = "http://hexicpyth.net/Pavlova/index.html"
         if not debug:
             self.options.headless = True
 
