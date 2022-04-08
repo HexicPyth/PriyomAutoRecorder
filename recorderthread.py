@@ -53,9 +53,14 @@ class Recorder:
             try:
                 self.kiwisdr.quit()
             except urllib3.exceptions.MaxRetryError:
-                pass
+                print("Warning: Encountered MaxRetryError when trying to quit firefox;")
 
         except OSError:
+            try:
+                self.kiwisdr.quit()
+            except urllib3.exceptions.MaxRetryError:
+                print("Warning: Encountered MaxRetryError when trying to quit firefox;")
+
             traceback.print_exc()
 
     def record(self, calendarmonitor):
